@@ -4,47 +4,46 @@
 #include <QPushButton>
 #include <QSharedPointer>
 
-Jogo::Jogo(QObject *parent) : QObject(parent), numMovimentos(0) {
-    matrizDePosicoes = randomInitTexts();
-    tempoJogo.setHMS(0,0,0);
+// creates a new game!
+Jogo::Jogo(QObject *parent) : QObject(parent) {
+   createNewGame();
 }
 
 // function prototype
 bool randomLessThan(QString, QString);
 
+// Returns a QStringlist of random values for game initialization
 QStringList Jogo::randomInitTexts() const {
     QStringList pos;
-    /*for(int i=1; i <= 16; i++)
+    for(int i=1; i <= 16; i++)
         pos.append(QString::number(i));
 
-    qSort(pos.begin(), pos.end(), randomLessThan);*/
+    qSort(pos.begin(), pos.end(), randomLessThan);
 
-    pos.append(QString::number(1)); pos.append(QString::number(2)); pos.append(QString::number(3)); pos.append(QString::number(4)); pos.append(QString::number(5));
+    // just for test!
+    /*pos.append(QString::number(1)); pos.append(QString::number(2)); pos.append(QString::number(3)); pos.append(QString::number(4)); pos.append(QString::number(5));
     pos.append(QString::number(6)); pos.append(QString::number(7)); pos.append(QString::number(8)); pos.append(QString::number(9)); pos.append(QString::number(10));
-    pos.append(QString::number(11)); pos.append(QString::number(12)); pos.append(QString::number(13)); pos.append(QString::number(14)); pos.append(QString::number(16)); pos.append(QString::number(15));
+    pos.append(QString::number(11)); pos.append(QString::number(12)); pos.append(QString::number(13)); pos.append(QString::number(14)); pos.append(QString::number(16)); pos.append(QString::number(15));*/
 
     return pos;
 }
 
-QStringList Jogo::getMatrizPosicoes() const {
-    return matrizDePosicoes;
-}
-
+// returns s1 < s2 randomly
 bool randomLessThan(QString s1, QString s2)
 {
     qsrand(qrand());
     return (bool)(qrand()%2); // returns 0 or 1
 }
 
-bool Jogo::puzzleMovement(int indexOfText){
+// Returns by copy the content of matrizDePosicoes
+QStringList Jogo::getMatrizPosicoes() const {
+    return matrizDePosicoes;
+}
 
-    //qDebug("Clicado em %d: ", indexOfText);
+bool Jogo::puzzleMovement(int indexOfText){
 
     int indexOfNull;
 
-    //QVector<QSharedPointer<QPushButton>>::iterator it;
-
-    //QString text(Pecas[indexOfText].data()->text());
     QString text(matrizDePosicoes[indexOfText]);
 
     // TODO: optimize
@@ -75,15 +74,17 @@ bool Jogo::puzzleMovement(int indexOfText){
     // else do nothing!
 
     return testVictory();
-
-
-    // TODO: emit signal of victory!
 }
 
+// resets the configuration of the new game
 void Jogo::createNewGame() {
     // clean num movements
     numMovimentos = 0;
-    matrizDePosicoes = randomInitTexts();
+
+    // it is fair presume that the game never will be initialized with a victory!
+    do {
+        matrizDePosicoes = randomInitTexts();
+    } while(testVictory());
 
     //TODO: clean chronometer
     tempoJogo.setHMS(0,0,0);

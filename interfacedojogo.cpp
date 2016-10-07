@@ -93,31 +93,6 @@ InterfaceDoJogo::InterfaceDoJogo(QWidget *parent) :
 
 }
 
-/*void InterfaceDoJogo::puzzleMovement(int idx){
-
-    bool isVictory = jogo->puzzleMovement(idx);
-    updatePecas(jogo->getMatrizPosicoes());
-
-    // Shows message of victory
-    QMessageBox victoryDialog;
-
-    // when victory, shows dialog message and record in the file
-    // the time and num of movements spent
-    if(isVictory)
-    {
-        QTime tempoVitoria = jogo->getTime();
-        int numMovimentos = jogo->getNumMovements();
-        QString msg("Você ganhou!\nNúmero de jogadas: "+ QString::number(numMovimentos)+
-                    "\nTempo de jogo: "+tempoVitoria.toString());
-        victoryDialog.setText(msg);
-        victoryDialog.exec();
-
-        // records in File
-        recordFile(tempoVitoria,numMovimentos);
-    }
-
-}*/
-
 void InterfaceDoJogo::puzzleMovement(int idx){
 
     bool isVictory = jogo->puzzleMovement(idx);
@@ -135,35 +110,33 @@ void InterfaceDoJogo::puzzleMovement(int idx){
         QString msg("Você ganhou!\nNúmero de jogadas: "+ QString::number(numMovimentos)+
                     "\nTempo de jogo: "+tempoVitoria.toString());
 
-        QDialog *parent         = new QDialog();
-        QGroupBox *boxUser      = new QGroupBox(parent);
-        QGroupBox *boxCongrat   = new QGroupBox(parent);
-        QHBoxLayout *nomeUser   = new QHBoxLayout(boxUser);
-        QHBoxLayout *congrat    = new QHBoxLayout(boxCongrat);
-        QVBoxLayout *vlayout    = new QVBoxLayout(parent);
+        QDialog     parent;
+        QGroupBox   boxUser(&parent);
+        QGroupBox   boxCongrat(&parent);
+        QHBoxLayout nomeUser(&boxUser);
+        QHBoxLayout congrat(&boxCongrat);
+        QVBoxLayout vlayout(&parent);
 
-        QLabel *inputNome = new QLabel(QString("Digite seu nome:"),boxUser);
-        QLineEdit *linhaNome = new QLineEdit(boxUser);
+        QLabel inputNome(QString("Digite seu nome:"),&boxUser);
+        QLineEdit linhaNome(&boxUser);
 
-        nomeUser->addWidget(inputNome);
-        nomeUser->addWidget(linhaNome);
+        nomeUser.addWidget(&inputNome);
+        nomeUser.addWidget(&linhaNome);
 
-        QLabel *parabens = new QLabel(msg,boxCongrat);
-        congrat->addWidget(parabens);
+        QLabel parabens(msg,&boxCongrat);
+        congrat.addWidget(&parabens);
 
-        vlayout->addWidget(boxCongrat);
-        vlayout->addWidget(boxUser);
+        vlayout.addWidget(&boxCongrat);
+        vlayout.addWidget(&boxUser);
 
-        parent->exec();
+        parent.exec();
 
         QString nome = ("anonymous");
 
         // if user specify his/her name, saves, else, we use a  name
-        if(!linhaNome->text().isEmpty()){
-            nome = linhaNome->text();
+        if(!linhaNome.text().isEmpty()){
+            nome = linhaNome.text();
         }
-
-        delete parent;
 
         // records in File
         recordInFile(tempoVitoria,numMovimentos,nome);
@@ -171,11 +144,11 @@ void InterfaceDoJogo::puzzleMovement(int idx){
 
 }
 
+// the SLOTS of InterfaceDoJogo class calls the SLOTS of Jogo class
+// Jogo class manage all game rules
 void InterfaceDoJogo::createNewGame() {
     jogo->createNewGame();
     updatePecas(jogo->getMatrizPosicoes());
-    // TODO: updates chronometer
-
 }
 
 void InterfaceDoJogo::updateTimer() {
@@ -196,6 +169,8 @@ void InterfaceDoJogo::setTextToPiece(QPushButton *ptr, QString t){
     ptr->setText(t);
 }
 
+// updates the text of each piece on the Puzzle with the updated value of matrizOfPositions
+// returned by Jogo object
 void InterfaceDoJogo::updatePecas(QStringList ql){
     setTextToPiece(ui->peca1,ql[0]);
     setTextToPiece(ui->peca2,ql[1]);
@@ -259,6 +234,7 @@ void InterfaceDoJogo::showHallOfFame(){
     QTextStream stream(&input);
     QString line;
 
+    // we save in rankingOfMovements the content of file in the format: "numMovements/playerName"
     line = stream.readLine();
     while(!line.isNull()){
         rankingOfMovements.append(line);
@@ -270,6 +246,7 @@ void InterfaceDoJogo::showHallOfFame(){
     input.open(QIODevice::ReadOnly);
     stream.setDevice(&input);
 
+    // we save in rankingOfMovements the content of file in the format: "timeOfGame/playerName"
     line = stream.readLine();
     while(!line.isNull()){
         rankingOfTimes.append(line);
@@ -282,40 +259,41 @@ void InterfaceDoJogo::showHallOfFame(){
     qSort(rankingOfMovements.begin(), rankingOfMovements.end(), sortingString2Int);
 
     // Collapses two listViews inside one widget
-    QWidget *windowRankings = new QWidget();
+    // QDialog is used to manage the widgets in the dialog screen
+    // we group inside groupBox each horizontal box. Inside that we put the listWidget
+    QDialog windowRankings;
 
-    QVBoxLayout *vlayout = new QVBoxLayout;
+    QGroupBox group1(&windowRankings);
+    QGroupBox group2(&windowRankings);
 
-    QGroupBox * group1 = new QGroupBox;
-    QGroupBox * group2 = new QGroupBox;
+    QVBoxLayout vlayout(&windowRankings);
 
-    QHBoxLayout *hlayout1 = new QHBoxLayout(group1);
-    QHBoxLayout *hlayout2 = new QHBoxLayout(group2);
+    QHBoxLayout hlayout1(&group1);
+    QHBoxLayout hlayout2(&group2);
 
-    QListWidget *leftList = new QListWidget;
-    QListWidget *rightList = new QListWidget;
+    QListWidget leftList(&group1);
+    QListWidget rightList(&group2);
 
-    leftList->addItems(rankingOfMovements);
-    rightList->addItems(rankingOfTimes);
+    // adds in each list widget the respective ranking
+    leftList.addItems(rankingOfMovements);
+    rightList.addItems(rankingOfTimes);
 
-    hlayout2->addWidget(leftList);
-    hlayout2->addWidget(rightList);
+    hlayout2.addWidget(&leftList);
+    hlayout2.addWidget(&rightList);
 
-    QLabel *titulo1 = new QLabel("Movimentos/Jogador");
-    QLabel *titulo2 = new QLabel("Tempo/Jogador");
+    QLabel titulo1("Movimentos/Jogador");
+    QLabel titulo2("Tempo/Jogador");
 
-    hlayout1->addWidget(titulo1);
-    hlayout1->addWidget(titulo2);
+    hlayout1.addWidget(&titulo1);
+    hlayout1.addWidget(&titulo2);
 
-    vlayout->addWidget(group1);
-    vlayout->addWidget(group2);
+    vlayout.addWidget(&group1);
+    vlayout.addWidget(&group2);
 
-    windowRankings->setLayout(vlayout);
-    windowRankings->show();
-
-    //showHallOfMovements(rankingOfMovements);
-    //showHallOfTimes(rankingOfTimes);
-
+    // applies the vertical layout to QDialog object
+    // the vertical layout stores the groupboxes defined earlier
+    windowRankings.setLayout(&vlayout);
+    windowRankings.exec();
 }
 
 // For now these methods are unused once a main wigdet creation method does all the job!
