@@ -9,6 +9,8 @@
 #include <QListWidget>
 #include <QtAlgorithms>
 #include <QHBoxLayout>
+#include <QLabel>
+#include <QInputDialog>
 
 // sorting functions prototypes
 bool sortingString2Time(QString, QString);
@@ -16,8 +18,7 @@ bool sortingString2Int(QString, QString);
 
 InterfaceDoJogo::InterfaceDoJogo(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::InterfaceDoJogo),
-    victoryDialog(this)
+    ui(new Ui::InterfaceDoJogo)
 {
     ui->setupUi(this);
 
@@ -83,17 +84,23 @@ InterfaceDoJogo::InterfaceDoJogo(QWidget *parent) :
     // on the startup we enable the hallOfFame button whether tempos.txt or movimentos.txt file exists
     // We presume that whether tempo.txt exists, moviments.txt also exists in the folder
     QFile t;
-    QDir::setCurrent("/home/bob/Documents/pablo/ufmg/sem11/pac/Puzzle/");
-    t.setFileName("tempos.txt");
+    QDir dir(QDir::currentPath());
+
+    t.setFileName(dir.absoluteFilePath("tempos.txt"));
+
     if(t.exists())
         ui->hallOfFame->setEnabled(true);
 
 }
 
-void InterfaceDoJogo::puzzleMovement(int idx){
+/*void InterfaceDoJogo::puzzleMovement(int idx){
 
     bool isVictory = jogo->puzzleMovement(idx);
     updatePecas(jogo->getMatrizPosicoes());
+
+    // Shows message of victory
+    QMessageBox victoryDialog;
+
     // when victory, shows dialog message and record in the file
     // the time and num of movements spent
     if(isVictory)
@@ -107,6 +114,59 @@ void InterfaceDoJogo::puzzleMovement(int idx){
 
         // records in File
         recordFile(tempoVitoria,numMovimentos);
+    }
+
+}*/
+
+void InterfaceDoJogo::puzzleMovement(int idx){
+
+    bool isVictory = jogo->puzzleMovement(idx);
+    updatePecas(jogo->getMatrizPosicoes());
+
+    // Shows message of victory
+    QInputDialog victoryDialog;
+
+    // when victory, shows dialog message and record in the file
+    // the time and num of movements spent
+    if(isVictory)
+    {
+        QTime tempoVitoria = jogo->getTime();
+        int numMovimentos = jogo->getNumMovements();
+        QString msg("Você ganhou!\nNúmero de jogadas: "+ QString::number(numMovimentos)+
+                    "\nTempo de jogo: "+tempoVitoria.toString());
+
+        QDialog *parent         = new QDialog();
+        QGroupBox *boxUser      = new QGroupBox(parent);
+        QGroupBox *boxCongrat   = new QGroupBox(parent);
+        QHBoxLayout *nomeUser   = new QHBoxLayout(boxUser);
+        QHBoxLayout *congrat    = new QHBoxLayout(boxCongrat);
+        QVBoxLayout *vlayout    = new QVBoxLayout(parent);
+
+        QLabel *inputNome = new QLabel(QString("Digite seu nome:"),boxUser);
+        QLineEdit *linhaNome = new QLineEdit(boxUser);
+
+        nomeUser->addWidget(inputNome);
+        nomeUser->addWidget(linhaNome);
+
+        QLabel *parabens = new QLabel(msg,boxCongrat);
+        congrat->addWidget(parabens);
+
+        vlayout->addWidget(boxCongrat);
+        vlayout->addWidget(boxUser);
+
+        parent->exec();
+
+        QString nome = ("anonymous");
+
+        // if user specify his/her name, saves, else, we use a  name
+        if(!linhaNome->text().isEmpty()){
+            nome = linhaNome->text();
+        }
+
+        delete parent;
+
+        // records in File
+        recordInFile(tempoVitoria,numMovimentos,nome);
     }
 
 }
@@ -162,25 +222,28 @@ InterfaceDoJogo::~InterfaceDoJogo()
     delete signalMapper;
 }
 
-void InterfaceDoJogo::recordFile(QTime tempo, int movimentos) {
+void InterfaceDoJogo::recordInFile(QTime tempo, int movimentos, QString nome) {
     // enables hall of fame pushbutton if there is at least one record in file
     if(!ui->hallOfFame->isEnabled()){
         ui->hallOfFame->setEnabled(true);
     }
 
     QFile output;
-    QDir::setCurrent("/home/bob/Documents/pablo/ufmg/sem11/pac/Puzzle/");
+    QDir dir(QDir::currentPath());
 
-    output.setFileName("movimentos.txt");
+    output.setFileName(dir.absoluteFilePath("movimentos.txt"));
     output.open(QIODevice::WriteOnly | QIODevice::Append);
     QTextStream out1(&output);
-    out1 << movimentos << endl;
+
+    // writes the number of movements and the name of the user separated by "/"
+    // we use split to separate these two fields again when recording the file
+    out1 << movimentos << "/" << nome << endl;
     output.close();
 
     output.setFileName("tempos.txt");
     output.open(QIODevice::WriteOnly | QIODevice::Append);
     QTextStream out2(&output);
-    out2 << tempo.toString() << endl;
+    out2 << tempo.toString() << "/" << nome << endl;
     output.close();
 }
 
@@ -189,21 +252,15 @@ void InterfaceDoJogo::showHallOfFame(){
     QStringList rankingOfMovements;
 
     QFile input;
-    QDir::setCurrent("/home/bob/Documents/pablo/ufmg/sem11/pac/Puzzle/");
+    QDir dir(QDir::currentPath());
 
-    input.setFileName("movimentos.txt");
+    input.setFileName(dir.absoluteFilePath("movimentos.txt"));
     input.open(QIODevice::ReadOnly);
     QTextStream stream(&input);
     QString line;
-    //int move;
-
-    qDebug() << "teste\n";
 
     line = stream.readLine();
     while(!line.isNull()){
-
-        //move = line.toInt(&isOk);
-        //if(isOk)
         rankingOfMovements.append(line);
         line = stream.readLine();
     }
@@ -215,7 +272,6 @@ void InterfaceDoJogo::showHallOfFame(){
 
     line = stream.readLine();
     while(!line.isNull()){
-        //time.fromString(line);
         rankingOfTimes.append(line);
         line = stream.readLine();
     }
@@ -227,7 +283,14 @@ void InterfaceDoJogo::showHallOfFame(){
 
     // Collapses two listViews inside one widget
     QWidget *windowRankings = new QWidget();
-    QHBoxLayout *layout = new QHBoxLayout;
+
+    QVBoxLayout *vlayout = new QVBoxLayout;
+
+    QGroupBox * group1 = new QGroupBox;
+    QGroupBox * group2 = new QGroupBox;
+
+    QHBoxLayout *hlayout1 = new QHBoxLayout(group1);
+    QHBoxLayout *hlayout2 = new QHBoxLayout(group2);
 
     QListWidget *leftList = new QListWidget;
     QListWidget *rightList = new QListWidget;
@@ -235,10 +298,19 @@ void InterfaceDoJogo::showHallOfFame(){
     leftList->addItems(rankingOfMovements);
     rightList->addItems(rankingOfTimes);
 
-    layout->addWidget(leftList);
-    layout->addWidget(rightList);
+    hlayout2->addWidget(leftList);
+    hlayout2->addWidget(rightList);
 
-    windowRankings->setLayout(layout);
+    QLabel *titulo1 = new QLabel("Movimentos/Jogador");
+    QLabel *titulo2 = new QLabel("Tempo/Jogador");
+
+    hlayout1->addWidget(titulo1);
+    hlayout1->addWidget(titulo2);
+
+    vlayout->addWidget(group1);
+    vlayout->addWidget(group2);
+
+    windowRankings->setLayout(vlayout);
     windowRankings->show();
 
     //showHallOfMovements(rankingOfMovements);
@@ -263,16 +335,27 @@ void InterfaceDoJogo::showHallOfMovements(QStringList moves){
     listOfMoves->show();
 }
 
+// the comparison function used by qsort have to aplit the strings
+// once they are in the format desiredValue/playerName
+// returns true if the first argument is less than the second one
+
+// used to sort the time spent in game
 bool sortingString2Time(QString t1, QString t2){
-    QTime qt1 = QTime::fromString(t1);
-    QTime qt2 = QTime::fromString(t2);
+    QStringList splittedT1 = t1.split("/");
+    QStringList splittedT2 = t2.split("/");
+
+    QTime qt1 = QTime::fromString(splittedT1[0]);
+    QTime qt2 = QTime::fromString(splittedT2[0]);
 
     return qt1.hour()*3600+qt1.minute()*60+qt1.second() < qt2.hour()*3600+qt2.minute()*60+qt2.second();
 }
 
+// used to sort the number of movements spent in the game
 bool sortingString2Int(QString t1, QString t2){
-    int it1 = t1.toInt();
-    int it2 = t2.toInt();
+    QStringList splittedT1 = t1.split("/");
+    QStringList splittedT2 = t2.split("/");
+    int it1 = splittedT1[0].toInt();
+    int it2 = splittedT1[0].toInt();
 
     return it1 < it2;
 }

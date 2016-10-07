@@ -36,13 +36,10 @@ private:
     QTimer *timer;
 
     void updatePecas(QStringList);
-    void recordFile(QTime, int);
+    void recordInFile(QTime, int,QString);
     void showHallOfTimes(QStringList);
     void showHallOfMovements(QStringList);
     void setTextToPiece(QPushButton *, QString);
-
-    // Shows message of victory
-    QMessageBox victoryDialog;
 
 
 public slots:
