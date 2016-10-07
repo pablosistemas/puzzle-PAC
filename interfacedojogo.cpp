@@ -8,6 +8,11 @@
 #include <QDebug>
 #include <QListWidget>
 #include <QtAlgorithms>
+#include <QHBoxLayout>
+
+// sorting functions prototypes
+bool sortingString2Time(QString, QString);
+bool sortingString2Int(QString, QString);
 
 InterfaceDoJogo::InterfaceDoJogo(QWidget *parent) :
     QWidget(parent),
@@ -71,8 +76,17 @@ InterfaceDoJogo::InterfaceDoJogo(QWidget *parent) :
 
     timer = new QTimer(this);
     timer->start(1000);
+
     // connects the chronometer event
     connect(timer, SIGNAL(timeout()), this, SLOT(updateTimer()));
+
+    // on the startup we enable the hallOfFame button whether tempos.txt or movimentos.txt file exists
+    // We presume that whether tempo.txt exists, moviments.txt also exists in the folder
+    QFile t;
+    QDir::setCurrent("/home/bob/Documents/pablo/ufmg/sem11/pac/Puzzle/");
+    t.setFileName("tempos.txt");
+    if(t.exists())
+        ui->hallOfFame->setEnabled(true);
 
 }
 
@@ -201,17 +215,38 @@ void InterfaceDoJogo::showHallOfFame(){
 
     line = stream.readLine();
     while(!line.isNull()){
-        line = stream.readLine();
         //time.fromString(line);
         rankingOfTimes.append(line);
+        line = stream.readLine();
     }
     input.close();
 
-    showHallOfMovements(rankingOfMovements);
-    showHallOfTimes(rankingOfTimes);
+    // sorts the list to exhibit on the screen
+    qSort(rankingOfTimes.begin(), rankingOfTimes.end(), sortingString2Time);
+    qSort(rankingOfMovements.begin(), rankingOfMovements.end(), sortingString2Int);
+
+    // Collapses two listViews inside one widget
+    QWidget *windowRankings = new QWidget();
+    QHBoxLayout *layout = new QHBoxLayout;
+
+    QListWidget *leftList = new QListWidget;
+    QListWidget *rightList = new QListWidget;
+
+    leftList->addItems(rankingOfMovements);
+    rightList->addItems(rankingOfTimes);
+
+    layout->addWidget(leftList);
+    layout->addWidget(rightList);
+
+    windowRankings->setLayout(layout);
+    windowRankings->show();
+
+    //showHallOfMovements(rankingOfMovements);
+    //showHallOfTimes(rankingOfTimes);
 
 }
 
+// For now these methods are unused once a main wigdet creation method does all the job!
 void InterfaceDoJogo::showHallOfTimes(QStringList times){
     // TODO: optimize and sort and delete
     QListView *listOfMoves = new QListView();
@@ -226,4 +261,18 @@ void InterfaceDoJogo::showHallOfMovements(QStringList moves){
     QStringListModel *tempos = new QStringListModel(moves);
     listOfMoves->setModel(tempos);
     listOfMoves->show();
+}
+
+bool sortingString2Time(QString t1, QString t2){
+    QTime qt1 = QTime::fromString(t1);
+    QTime qt2 = QTime::fromString(t2);
+
+    return qt1.hour()*3600+qt1.minute()*60+qt1.second() < qt2.hour()*3600+qt2.minute()*60+qt2.second();
+}
+
+bool sortingString2Int(QString t1, QString t2){
+    int it1 = t1.toInt();
+    int it2 = t2.toInt();
+
+    return it1 < it2;
 }
